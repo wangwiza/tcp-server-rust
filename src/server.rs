@@ -2,7 +2,7 @@ use std::error::Error;
 use std::sync::mpsc;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
-use tokio::runtime::Runtime;
+use tokio::runtime::Builder;
 
 use crate::task::Task;
 use crate::task::TaskType;
@@ -17,6 +17,9 @@ pub trait ServerTrait {
 
 pub struct Server;
 
+/// Use 6 threads for async tasks
+const ASYNC_THREADS: usize = 6;
+
 impl ServerTrait for Server {
     fn start_server(
         &self,
@@ -24,8 +27,13 @@ impl ServerTrait for Server {
         tx: mpsc::Sender<Result<(), Box<dyn Error + Send>>>,
     ) {
         println!("Starting the server");
-        // By default, it will start a worker thread for each CPU core available on the system.
-        let rt = Runtime::new().unwrap();
+        // Create a runtime with specified number of worker threads
+        let rt = Builder::new_multi_thread()
+            .worker_threads(ASYNC_THREADS)
+            .enable_all()
+            .build()
+            .unwrap();
+
         rt.block_on(async {
             let listener = TcpListener::bind(&address).await;
             match listener {
