@@ -1,9 +1,11 @@
 use std::error::Error;
-use std::io::{BufRead, BufReader, Write};
-use std::net::{TcpListener, TcpStream};
 use std::sync::mpsc;
+use tokio::io::{AsyncWriteExt, BufReader, AsyncBufReadExt};
+use tokio::net::{TcpListener, TcpStream};
+use tokio::runtime::Runtime;
 
 use crate::task::Task;
+use crate::task::TaskType;
 
 pub trait ServerTrait {
     fn start_server(
@@ -22,65 +24,73 @@ impl ServerTrait for Server {
         tx: mpsc::Sender<Result<(), Box<dyn Error + Send>>>,
     ) {
         println!("Starting the server");
-        let listener = TcpListener::bind(address);
-
-        match listener {
-            Ok(_) => tx.send(Ok(())).unwrap(),
-            Err(e) => {
-                println!("here {}", e);
-                tx.send(Err(Box::new(e))).unwrap();
-                return;
-            }
-        }
-        for stream in listener.unwrap().incoming() {
-            match stream {
-                Ok(stream) => {
-                    Self::handle_connection(stream);
+        // By default, it will start a worker thread for each CPU core available on the system.
+        let rt = Runtime::new().unwrap();
+        rt.block_on(async {
+            let listener = TcpListener::bind(&address).await;
+            match listener {
+                Ok(_) => {
+                    tx.send(Ok(())).unwrap();
                 }
                 Err(e) => {
-                    eprintln!("Error accepting connection: {}", e);
+                    tx.send(Err(Box::new(e))).unwrap();
+                    return;
                 }
             }
-        }
+            let listener = listener.unwrap();
+            loop {
+                match listener.accept().await {
+                    Ok((stream, _)) => {
+                        tokio::spawn(Self::handle_connection(stream));
+                    }
+                    Err(e) => {
+                        eprintln!("Error accepting connection: {}", e);
+                    }
+                }
+            }
+        });
     }
 }
 
 impl Server {
-    fn handle_connection(mut stream: TcpStream) {
+    async fn handle_connection(mut stream: TcpStream) {
+        let (read_half, mut write_half) = stream.split();
+        let mut reader = BufReader::new(read_half);
+        let mut line = String::new();
+
         loop {
-            let mut buf_reader = BufReader::new(&mut stream);
-            let mut line = String::new();
-            match buf_reader.read_line(&mut line) {
-                Ok(0) => {
-                    return;
-                }
+            match reader.read_line(&mut line).await {
+                Ok(0) => break,
                 Ok(_) => {
-                    let response = Self::get_task_value(line);
+                    let response = Self::get_task_value(line.clone()).await;
                     if let Some(r) = response {
-                        stream.write(&[r]).unwrap();
+                        let _ = write_half.write_all(&[r]).await;
                     }
+                    line.clear();
                 }
                 Err(e) => {
                     eprintln!("Unable to get command due to: {}", e);
-                    return;
+                    break;
                 }
             }
         }
     }
 
-    fn get_task_value(buf: String) -> Option<u8> {
-        let try_parse = || -> Result<u8, Box<dyn std::error::Error>> {
-            let numbers: Vec<&str> = buf.trim().split(':').collect();
-            let task_type = numbers.first().unwrap().parse::<u8>()?;
-            let seed = numbers.last().unwrap().parse::<u64>()?;
+    async fn get_task_value(buf: String) -> Option<u8> {
+        let numbers: Vec<&str> = buf.trim().split(':').collect();
+        let task_type_num = numbers.first()?.parse::<u8>().ok()?;
+        let seed = numbers.last()?.parse::<u64>().ok()?;
+        let task_type = TaskType::from_u8(task_type_num)?;
 
-            let result = Task::execute(task_type, seed);
-            Ok(result)
+        let result = match task_type {
+            TaskType::CpuIntensiveTask => {
+                tokio::task::spawn_blocking(move || Task::execute(task_type_num, seed))
+                    .await
+                    .ok()?
+            }
+            TaskType::IOIntensiveTask => Task::execute_async(task_type_num, seed).await,
         };
 
-        match try_parse() {
-            Ok(r) => Some(r),
-            Err(_) => None
-        }
+        Some(result)
     }
 }
