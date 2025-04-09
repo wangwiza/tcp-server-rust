@@ -1,0 +1,40 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper, total={18cm, 26cm}]{geometry}
+\linespread{1.15}
+
+\title{CS3211 Assignment 3}
+\author{David Zhu (E0958755), William (E1496974)}
+\date{AY24/25 Semester 2}
+
+\input{preamble.tex}
+
+\begin{document}
+
+\maketitle
+
+% Page Limit is 2
+
+\section{TCP Server}
+
+% - An outline and brief explanation of your TCP server - include all assumptions, as well as any non-trivial implementation details related to processing requests from multiple clients.
+
+\section{Concurrency Paradigm}
+
+% 1: No Concurrency 	The server handles one client at a time and one request from the clients at a time
+% 2: Client-Level Concurrency 	Multiple clients, each with its own TCP stream, can run concurrently, but I/O and CPU tasks in the same CPU are not executed concurrently
+% 3: Task-Level Concurrency 	Multiple clients can run concurrently + I/O and CPU tasks in the same CPU are executed concurrently.
+
+% - Explain the concurrency paradigm used in your concurrent implementation and how the clients' requests are being handled concurrently.
+
+\section{Concurrency Level}
+
+% - What level of concurrency does your server achieve and why? Explain your design. Briefly explain ALL cases when the concurrency level decreases from your claimed level of concurrency.
+
+\section{Server Parallel Tasks}
+
+% - Will your server run tasks in parallel? Briefly explain.
+
+% - If you have tried multiple implementations, explain the differences and your evolution to the current submission. There is no need to submit your alternative implementations.
+
+\end{document}
+
