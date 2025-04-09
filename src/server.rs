@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::sync::mpsc;
-use tokio::io::{AsyncWriteExt, BufReader, AsyncBufReadExt};
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::runtime::Runtime;
 
