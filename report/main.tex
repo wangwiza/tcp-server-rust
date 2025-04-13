@@ -17,7 +17,8 @@
 \section{TCP Server}
 
 % - An outline and brief explanation of your TCP server - include all assumptions, as well as any non-trivial implementation details related to processing requests from multiple clients.
-Our TCP server utilizes the \texttt{tokio} library for non-blocking I/O operations.
+Our TCP server utilizes the \texttt{tokio} library to asynchronously handle sending and receiving
+messages on TCP connections.
 
 \section{Concurrency Paradigm}
 
@@ -25,9 +26,13 @@ Our TCP server utilizes the \texttt{tokio} library for non-blocking I/O operatio
 We used a couple different concurrency paradigm/techniques:
 \begin{itemize}
     \item We worked with asynchronous programming by turning the connection handling and value parsing into async functions. A tokio thread is spawned for every connection.
-    \item We also used thread pools using both tokio and rayon to allow I/O and CPU task parallelism.
-    \item We use an ARC pointer to pass the rayon pool down the async functions `handle_connection` and `get_task_value` so that rayon threads may be spawned for CPU tasks.
+    \item We also used thread pools using both tokio and rayon to handle I/O task and CPU task parallelism
+        respectively.
+        \begin{itemize}
+    \item We use an ARC pointer to pass the rayon pool down the async functions
+        \texttt{handle\_connection} and \texttt{get\_task\_value} so that rayon threads may be spawned for CPU tasks.
     \item We use message passing using a one-shot channel to bridge rayon to tokio.
+        \end{itemize}
 \end{itemize}
 
 
@@ -39,7 +44,7 @@ We used a couple different concurrency paradigm/techniques:
 % 3: Task-Level Concurrency 	Multiple clients can run concurrently + I/O and CPU tasks in the same CPU are executed concurrently.
 Our server achieves task-level concurrency.
 \begin{enumerate}
-    \item Multiple clients can run concurrently. Each connection is wrapped in tokio::spawn, and tokio schedules these tasks across its 6 worker threads. 
+    \item Multiple clients can run concurrently. Each connection is wrapped in tokio::spawn, and tokio schedules these tasks across its 6 worker threads.
     \item I/O and CPU tasks can execute concurrently. I/O tasks run on tokio's async threads, while CPU tasks are offloaded to rayon's 10-thread pool
 \end{enumerate}
 
@@ -51,11 +56,13 @@ Our server will run tasks in parallel.
     \item CPU-intensive tasks are distributed across rayon threads, so two CPU tasks from different clients execute in parallel.
     \item I/O tasks are async and concurrent on tokio threads. Multiple tokio threads can handle separate I/O tasks in parallel.
 \end{itemize}
-However, tasks within a single client are processed sequentially as the protocol enforces line-by-line processing.
+However, tasks within a single client are processed sequentially as enforced by the protocol.
 
+\section{Evolution of Implementation}
 % - If you have tried multiple implementations, explain the differences and your evolution to the current submission. There is no need to submit your alternative implementations.
 \begin{itemize}
-    \item Initial solution: uses tokio, runs async tasks asynchronously, and cpu tasks on its own thread using tokio's spawn_blocking. However, tokio docs suggest using rayon for CPU tasks.
+    \item Initial solution: uses tokio, runs async tasks asynchronously, and cpu tasks on its own
+        thread using tokio's \texttt{spawn\_blocking}. However, tokio docs suggest using rayon for CPU tasks.
     \item Final solution: as described in this report, uses rayon thread pool. This also allows to avoids the runtime error of spawning too many tokio threads too by the CPU tasks.
 \end{itemize}
 
