@@ -122,9 +122,9 @@ impl Server {
                         let result = Task::execute(task_type_num, seed);
                         let _ = tx.send(result);
                     });
-                    rx.await.ok()?;
+                    rx.await.ok()?
                 } else {
-                    Task::execute_async(task_type_num, seed).await;
+                    Task::execute_async(task_type_num, seed).await
                 }
             }
         };
