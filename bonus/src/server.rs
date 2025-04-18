@@ -23,7 +23,7 @@ pub struct Server;
 const ASYNC_THREADS: usize = 6;
 // The other threads can handle the CPU tasks
 const RAYON_THREADS: usize = 10;
-const CPU_TASK_PROB: float = 0.5;
+const CPU_TASK_PROB: f64 = 0.5;
 
 impl ServerTrait for Server {
     fn start_server(
