@@ -8,6 +8,7 @@ const MAX_IO_DURATION_MS: usize = 2000;
 pub enum TaskType {
     CpuIntensiveTask,
     IOIntensiveTask,
+    MysteryTask,
 }
 
 impl TaskType {
@@ -15,6 +16,7 @@ impl TaskType {
         match value {
             0 => Some(TaskType::CpuIntensiveTask),
             1 => Some(TaskType::IOIntensiveTask),
+            2 => Some(TaskType::MysteryTask),
             _ => None, // Handle invalid u8 values
         }
     }
@@ -29,6 +31,7 @@ impl Task {
         match TaskType::from_u8(typ).unwrap() {
             TaskType::CpuIntensiveTask => Self::do_cpu_intensive_task(seed),
             TaskType::IOIntensiveTask => Self::do_io_intensive_task(seed),
+            TaskType::MysteryTask => Self::do_cpu_intensive_task(seed),
         }
     }
 
@@ -37,6 +40,7 @@ impl Task {
         match TaskType::from_u8(typ).unwrap() {
             TaskType::CpuIntensiveTask => Self::do_cpu_intensive_task_async(seed).await,
             TaskType::IOIntensiveTask => Self::do_io_intensive_task_async(seed).await,
+            TaskType::MysteryTask => Self::do_cpu_intensive_task_async(seed).await,
         }
     }
 
